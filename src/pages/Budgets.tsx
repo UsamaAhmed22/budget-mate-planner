@@ -23,8 +23,8 @@ const Budgets = () => {
         )
         .reduce((sum, t) => sum + t.amount, 0);
       
-      const category = categories.find(c => c.name === budget.category);
-      return { ...budget, spent, category };
+      const categoryData = categories.find(c => c.name === budget.category);
+      return { ...budget, spent, categoryData };
     });
 
   return (
@@ -54,17 +54,17 @@ const Budgets = () => {
               <div key={budget.id} className="bg-card rounded-2xl shadow-card p-6 border border-border space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-foreground">{budget.category}</h3>
-                  {budget.category && (
+                  {budget.categoryData && (
                     <CategoryTag 
-                      name={typeof budget.category === 'string' ? budget.category : budget.category.name} 
-                      color={typeof budget.category === 'object' && budget.category ? budget.category.color : '#6b7280'} 
+                      name={budget.categoryData.name} 
+                      color={budget.categoryData.color} 
                     />
                   )}
                 </div>
                 <ProgressBar
                   value={budget.spent}
                   max={budget.amount}
-                  color={typeof budget.category === 'object' && budget.category ? budget.category.color : 'hsl(var(--primary))'}
+                  color={budget.categoryData?.color || 'hsl(var(--primary))'}
                 />
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">
