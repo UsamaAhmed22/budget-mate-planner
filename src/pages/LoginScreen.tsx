@@ -15,7 +15,7 @@ const LoginScreen = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -24,7 +24,7 @@ const LoginScreen = () => {
       return;
     }
 
-    const success = login(email, password);
+    const success = await login(email, password);
     if (success) {
       toast({
         title: "Welcome back!",
@@ -91,11 +91,6 @@ const LoginScreen = () => {
           </p>
         </div>
 
-        <div className="pt-4 border-t border-border">
-          <p className="text-xs text-center text-muted-foreground">
-            Demo: osama@test.com / password
-          </p>
-        </div>
       </Card>
     </div>
   );

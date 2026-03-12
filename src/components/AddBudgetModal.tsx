@@ -20,7 +20,7 @@ export const AddBudgetModal = ({ isOpen, onClose }: AddBudgetModalProps) => {
 
   const expenseCategories = categories.filter(c => c.type === 'expense');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!category || !amount || !month) {
@@ -32,21 +32,29 @@ export const AddBudgetModal = ({ isOpen, onClose }: AddBudgetModalProps) => {
       return;
     }
 
-    addBudget({
-      category,
-      amount: parseFloat(amount),
-      month,
-    });
+    try {
+      await addBudget({
+        category,
+        amount: parseFloat(amount),
+        month,
+      });
 
-    toast({
-      title: "Success",
-      description: "Budget added successfully",
-    });
+      toast({
+        title: "Success",
+        description: "Budget added successfully",
+      });
 
-    setCategory('');
-    setAmount('');
-    setMonth(new Date().toISOString().substring(0, 7));
-    onClose();
+      setCategory('');
+      setAmount('');
+      setMonth(new Date().toISOString().substring(0, 7));
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Action failed',
+        variant: "destructive",
+      });
+    }
   };
 
   return (

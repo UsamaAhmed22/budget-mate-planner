@@ -1,73 +1,124 @@
-# Welcome to your Lovable project
+# BudgetMate Planner (Full Stack)
 
-## Project info
+BudgetMate is now a full-stack personal finance app:
 
-**URL**: https://lovable.dev/projects/e5d2cea8-5acd-46c6-8ba6-02e1df42247a
+- Frontend: React + Vite + TypeScript + Tailwind + shadcn/ui
+- Backend: Node.js + Express
+- Database: Prisma + SQLite
+- Auth: JWT + bcrypt password hashing
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- User signup/login with JWT authentication
+- Protected routes and session persistence
+- Manage transactions (add/edit/delete)
+- Manage budgets (add)
+- Manage categories (admin only create/edit/delete)
+- Manage user settings (currency/theme)
+- Reset all user data to defaults
 
-**Use Lovable**
+## Project structure
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/e5d2cea8-5acd-46c6-8ba6-02e1df42247a) and start prompting.
+- `src/` frontend app
+- `server/src/` backend API
+- `server/prisma/schema.prisma` database schema
 
-Changes made via Lovable will be committed automatically to this repo.
+## Local setup
 
-**Use your preferred IDE**
+### 1) Install dependencies
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+npm install
+npm run server:install
 ```
 
-**Edit a file directly in GitHub**
+### 2) Configure environment variables
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Create frontend env file:
 
-**Use GitHub Codespaces**
+```bash
+cp .env.example .env
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Create backend env file:
 
-## What technologies are used for this project?
+```bash
+cp server/.env.example server/.env
+```
 
-This project is built with:
+On Windows PowerShell use:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```powershell
+Copy-Item .env.example .env
+Copy-Item server/.env.example server/.env
+```
 
-## How can I deploy this project?
+### 3) Run database migration
 
-Simply open [Lovable](https://lovable.dev/projects/e5d2cea8-5acd-46c6-8ba6-02e1df42247a) and click on Share -> Publish.
+```bash
+npm run server:db:migrate
+```
 
-## Can I connect a custom domain to my Lovable project?
+### 4) Start frontend + backend together
 
-Yes, you can!
+```bash
+npm run dev:full
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+App URLs:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:4000/api
+
+## Important backend env variables
+
+In `server/.env`:
+
+- `DATABASE_URL="file:./dev.db"`
+- `JWT_SECRET="replace_with_a_long_random_secret"`
+- `PORT=4000`
+- `FRONTEND_URL="http://localhost:5173"`
+
+## Deployment guide
+
+You can deploy frontend and backend separately.
+
+### Backend deployment (Render/Railway/Fly/VM)
+
+1. Deploy `server/` as a Node service.
+2. Set env vars: `DATABASE_URL`, `JWT_SECRET`, `PORT`, `FRONTEND_URL`.
+3. Run migrations during deploy:
+	- `npm run db:deploy`
+4. Start command:
+	- `npm run start`
+
+### Frontend deployment (Vercel/Netlify)
+
+1. Deploy project root as static frontend.
+2. Set frontend env var:
+	- `VITE_API_URL=https://your-backend-domain/api`
+3. Build command:
+	- `npm run build`
+4. Publish directory:
+	- `dist`
+
+## API overview
+
+- `POST /api/auth/signup`
+- `POST /api/auth/login`
+- `GET /api/bootstrap`
+- `POST /api/transactions`
+- `PUT /api/transactions/:id`
+- `DELETE /api/transactions/:id`
+- `POST /api/budgets`
+- `POST /api/categories`
+- `PUT /api/categories/:id`
+- `DELETE /api/categories/:id`
+- `PATCH /api/settings`
+- `POST /api/reset`
+
+## Notes
+
+- First user who signs up gets `admin` role.
+- Categories page operations are admin-restricted at both UI and API levels.
+- Auth token and user session are persisted in browser localStorage.

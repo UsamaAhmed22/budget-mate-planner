@@ -1,16 +1,23 @@
 import { useApp } from '@/context/AppContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Card } from '@/components/ui/card';
 import { LogOut, RotateCcw, User } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { useEffect, useState } from 'react';
 
 const Settings = () => {
   const { currentUser, settings, updateSettings, logout, resetApp } = useApp();
   const navigate = useNavigate();
+  const [startingBalance, setStartingBalance] = useState(settings.startingBalance.toString());
+
+  useEffect(() => {
+    setStartingBalance(settings.startingBalance.toString());
+  }, [settings.startingBalance]);
 
   const handleLogout = () => {
     logout();
@@ -21,30 +28,89 @@ const Settings = () => {
     navigate('/login');
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (confirm('Are you sure you want to reset all data? This cannot be undone.')) {
-      resetApp();
+      try {
+        await resetApp();
+        toast({
+          title: "Reset complete",
+          description: "All data has been reset to defaults",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : 'Reset failed',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
+  const handleThemeToggle = async (checked: boolean) => {
+    try {
+      await updateSettings({ theme: checked ? 'dark' : 'light' });
       toast({
-        title: "Reset complete",
-        description: "All data has been reset to defaults",
+        title: "Theme updated",
+        description: `Switched to ${checked ? 'dark' : 'light'} mode`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Update failed',
+        variant: 'destructive',
       });
     }
   };
 
-  const handleThemeToggle = (checked: boolean) => {
-    updateSettings({ theme: checked ? 'dark' : 'light' });
-    toast({
-      title: "Theme updated",
-      description: `Switched to ${checked ? 'dark' : 'light'} mode`,
-    });
+  const handleCurrencyChange = async (currency: string) => {
+    try {
+      await updateSettings({ currency });
+      toast({
+        title: "Currency updated",
+        description: `Currency changed to ${currency}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Update failed',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleCurrencyChange = (currency: string) => {
-    updateSettings({ currency });
-    toast({
-      title: "Currency updated",
-      description: `Currency changed to ${currency}`,
-    });
+  const handleStartingBalanceSave = async () => {
+    if (currentUser?.role !== 'admin') {
+      toast({
+        title: 'Admin only',
+        description: 'Only admin can update household starting balance',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const parsed = Number(startingBalance);
+    if (Number.isNaN(parsed)) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a valid starting balance',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await updateSettings({ startingBalance: parsed });
+      toast({
+        title: 'Starting balance updated',
+        description: 'Household opening balance has been saved',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Update failed',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -102,6 +168,26 @@ const Settings = () => {
                 <SelectItem value="JPY">JPY (¥)</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="starting-balance">Starting Balance (Household)</Label>
+            <div className="flex gap-2">
+              <Input
+                id="starting-balance"
+                type="number"
+                step="0.01"
+                value={startingBalance}
+                onChange={(e) => setStartingBalance(e.target.value)}
+                placeholder="Enter household starting balance"
+              />
+              <Button onClick={handleStartingBalanceSave}>
+                Save
+              </Button>
+            </div>
+            {currentUser?.role !== 'admin' && (
+              <p className="text-xs text-muted-foreground">Only admin can change household starting balance.</p>
+            )}
           </div>
 
           <div className="flex items-center justify-between">

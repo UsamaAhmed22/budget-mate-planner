@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { apiRequest } from '@/lib/api';
 
 export interface User {
   id: number;
   name: string;
   email: string;
-  password: string;
   role: 'admin' | 'user';
 }
 
@@ -45,25 +45,22 @@ interface AppContextType {
   categories: Category[];
   budgets: Budget[];
   settings: Settings;
-  login: (email: string, password: string) => boolean;
-  signup: (name: string, email: string, password: string) => boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  addTransaction: (transaction: Omit<Transaction, 'id'>) => void;
-  editTransaction: (id: number, transaction: Omit<Transaction, 'id'>) => void;
-  deleteTransaction: (id: number) => void;
-  addBudget: (budget: Omit<Budget, 'id' | 'spent'>) => void;
-  addCategory: (category: Omit<Category, 'id'>) => void;
-  editCategory: (id: number, category: Omit<Category, 'id'>) => void;
-  deleteCategory: (id: number) => void;
-  updateSettings: (settings: Partial<Settings>) => void;
-  resetApp: () => void;
+  addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>;
+  editTransaction: (id: number, transaction: Omit<Transaction, 'id'>) => Promise<void>;
+  deleteTransaction: (id: number) => Promise<void>;
+  addBudget: (budget: Omit<Budget, 'id' | 'spent'>) => Promise<void>;
+  addCategory: (category: Omit<Category, 'id'>) => Promise<void>;
+  editCategory: (id: number, category: Omit<Category, 'id'>) => Promise<void>;
+  deleteCategory: (id: number) => Promise<void>;
+  updateSettings: (settings: Partial<Settings>) => Promise<void>;
+  resetApp: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
-
-const initialUsers: User[] = [
-  { id: 1, name: "Osama Ahmed", email: "osama@test.com", password: "password", role: "admin" }
-];
 
 const initialCategories: Category[] = [
   { id: 1, name: "Salary", type: "income", color: "#10b981" },
@@ -77,24 +74,9 @@ const initialCategories: Category[] = [
   { id: 9, name: "Other", type: "expense", color: "#6b7280" },
 ];
 
-const initialTransactions: Transaction[] = [
-  { id: 1, amount: 5000, type: "income", category: "Salary", date: "2025-10-01", description: "Monthly salary" },
-  { id: 2, amount: 1200, type: "expense", category: "Rent", date: "2025-10-02", description: "October rent payment" },
-  { id: 3, amount: 150, type: "expense", category: "Food", date: "2025-10-03", description: "Grocery shopping" },
-  { id: 4, amount: 50, type: "expense", category: "Transport", date: "2025-10-03", description: "Gas for car" },
-  { id: 5, amount: 800, type: "income", category: "Freelance", date: "2025-10-04", description: "Web design project" },
-  { id: 6, amount: 75, type: "expense", category: "Entertainment", date: "2025-10-05", description: "Movie and dinner" },
-  { id: 7, amount: 200, type: "expense", category: "Bills", date: "2025-10-05", description: "Electricity and water" },
-  { id: 8, amount: 120, type: "expense", category: "Food", date: "2025-10-06", description: "Restaurant lunch" },
-  { id: 9, amount: 45, type: "expense", category: "Health", date: "2025-10-06", description: "Pharmacy items" },
-  { id: 10, amount: 30, type: "expense", category: "Transport", date: "2025-10-07", description: "Taxi ride" },
-];
+const initialTransactions: Transaction[] = [];
 
-const initialBudgets: Budget[] = [
-  { id: 1, category: "Food", amount: 500, month: "2025-10", spent: 270 },
-  { id: 2, category: "Transport", amount: 200, month: "2025-10", spent: 80 },
-  { id: 3, category: "Entertainment", amount: 300, month: "2025-10", spent: 75 },
-];
+const initialBudgets: Budget[] = [];
 
 const initialSettings: Settings = {
   currency: "USD",
@@ -103,12 +85,81 @@ const initialSettings: Settings = {
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [budgets, setBudgets] = useState<Budget[]>(initialBudgets);
   const [settings, setSettings] = useState<Settings>(initialSettings);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('bm_token'));
+
+  const setAuth = (authToken: string | null, user: User | null) => {
+    if (authToken) {
+      localStorage.setItem('bm_token', authToken);
+      setToken(authToken);
+    } else {
+      localStorage.removeItem('bm_token');
+      setToken(null);
+    }
+
+    if (user) {
+      localStorage.setItem('bm_user', JSON.stringify(user));
+      setCurrentUser(user);
+    } else {
+      localStorage.removeItem('bm_user');
+      setCurrentUser(null);
+    }
+  };
+
+  const loadBootstrap = async (authToken: string) => {
+    const data = await apiRequest<{
+      transactions: Transaction[];
+      categories: Category[];
+      budgets: Budget[];
+      settings: Settings;
+    }>('/bootstrap', { token: authToken });
+
+    setTransactions(data.transactions);
+    setCategories(data.categories);
+    setBudgets(data.budgets);
+    setSettings(data.settings);
+  };
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('bm_user');
+    if (storedUser) {
+      try {
+        setCurrentUser(JSON.parse(storedUser));
+      } catch {
+        localStorage.removeItem('bm_user');
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const init = async () => {
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        await loadBootstrap(token);
+      } catch {
+        setAuth(null, null);
+        setTransactions(initialTransactions);
+        setCategories(initialCategories);
+        setBudgets(initialBudgets);
+        setSettings(initialSettings);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    void init();
+  }, [token]);
 
   // Apply theme on mount and when settings change
   useEffect(() => {
@@ -119,85 +170,147 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [settings.theme]);
 
-  const login = (email: string, password: string): boolean => {
-    const user = users.find(u => u.email === email && u.password === password);
-    if (user) {
-      setCurrentUser(user);
-      return true;
-    }
-    return false;
-  };
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const result = await apiRequest<{ token: string; user: User }>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
 
-  const signup = (name: string, email: string, password: string): boolean => {
-    if (users.find(u => u.email === email)) {
+      setAuth(result.token, result.user);
+      await loadBootstrap(result.token);
+      return true;
+    } catch {
       return false;
     }
-    const newUser: User = {
-      id: users.length + 1,
-      name,
-      email,
-      password,
-      role: users.length === 1 ? 'admin' : 'user', // First new signup becomes admin
-    };
-    setUsers([...users, newUser]);
-    setCurrentUser(newUser);
-    return true;
+  };
+
+  const signup = async (name: string, email: string, password: string): Promise<boolean> => {
+    try {
+      const result = await apiRequest<{ token: string; user: User }>('/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      setAuth(result.token, result.user);
+      await loadBootstrap(result.token);
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const logout = () => {
-    setCurrentUser(null);
-  };
-
-  const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
-    const newTransaction = { ...transaction, id: transactions.length + 1 };
-    setTransactions([...transactions, newTransaction]);
-    
-    // Update budget spent if applicable
-    if (transaction.type === 'expense') {
-      const month = transaction.date.substring(0, 7);
-      setBudgets(budgets.map(b => 
-        b.category === transaction.category && b.month === month
-          ? { ...b, spent: b.spent + transaction.amount }
-          : b
-      ));
-    }
-  };
-
-  const editTransaction = (id: number, transaction: Omit<Transaction, 'id'>) => {
-    setTransactions(transactions.map(t => t.id === id ? { ...transaction, id } : t));
-  };
-
-  const deleteTransaction = (id: number) => {
-    setTransactions(transactions.filter(t => t.id !== id));
-  };
-
-  const addBudget = (budget: Omit<Budget, 'id' | 'spent'>) => {
-    const newBudget = { ...budget, id: budgets.length + 1, spent: 0 };
-    setBudgets([...budgets, newBudget]);
-  };
-
-  const addCategory = (category: Omit<Category, 'id'>) => {
-    const newCategory = { ...category, id: categories.length + 1 };
-    setCategories([...categories, newCategory]);
-  };
-
-  const editCategory = (id: number, category: Omit<Category, 'id'>) => {
-    setCategories(categories.map(c => c.id === id ? { ...category, id } : c));
-  };
-
-  const deleteCategory = (id: number) => {
-    setCategories(categories.filter(c => c.id !== id));
-  };
-
-  const updateSettings = (newSettings: Partial<Settings>) => {
-    setSettings({ ...settings, ...newSettings });
-  };
-
-  const resetApp = () => {
+    setAuth(null, null);
     setTransactions(initialTransactions);
     setCategories(initialCategories);
     setBudgets(initialBudgets);
     setSettings(initialSettings);
+  };
+
+  const addTransaction = async (transaction: Omit<Transaction, 'id'>) => {
+    if (!token) return;
+
+    const created = await apiRequest<Transaction>('/transactions', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(transaction),
+    });
+    setTransactions((prev) => [created, ...prev]);
+  };
+
+  const editTransaction = async (id: number, transaction: Omit<Transaction, 'id'>) => {
+    if (!token) return;
+
+    const updated = await apiRequest<Transaction>(`/transactions/${id}`, {
+      method: 'PUT',
+      token,
+      body: JSON.stringify(transaction),
+    });
+    setTransactions((prev) => prev.map((t) => (t.id === id ? updated : t)));
+  };
+
+  const deleteTransaction = async (id: number) => {
+    if (!token) return;
+
+    await apiRequest<void>(`/transactions/${id}`, {
+      method: 'DELETE',
+      token,
+    });
+    setTransactions((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  const addBudget = async (budget: Omit<Budget, 'id' | 'spent'>) => {
+    if (!token) return;
+
+    const created = await apiRequest<Budget>('/budgets', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(budget),
+    });
+    setBudgets((prev) => [...prev, created]);
+  };
+
+  const addCategory = async (category: Omit<Category, 'id'>) => {
+    if (!token) return;
+
+    const created = await apiRequest<Category>('/categories', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(category),
+    });
+    setCategories((prev) => [...prev, created]);
+  };
+
+  const editCategory = async (id: number, category: Omit<Category, 'id'>) => {
+    if (!token) return;
+
+    const updated = await apiRequest<Category>(`/categories/${id}`, {
+      method: 'PUT',
+      token,
+      body: JSON.stringify(category),
+    });
+    setCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
+  };
+
+  const deleteCategory = async (id: number) => {
+    if (!token) return;
+
+    await apiRequest<void>(`/categories/${id}`, {
+      method: 'DELETE',
+      token,
+    });
+    setCategories((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const updateSettings = async (newSettings: Partial<Settings>) => {
+    if (!token) return;
+
+    const updated = await apiRequest<Settings>('/settings', {
+      method: 'PATCH',
+      token,
+      body: JSON.stringify(newSettings),
+    });
+    setSettings(updated);
+  };
+
+  const resetApp = async () => {
+    if (!token) return;
+
+    const data = await apiRequest<{
+      transactions: Transaction[];
+      categories: Category[];
+      budgets: Budget[];
+      settings: Settings;
+    }>('/reset', {
+      method: 'POST',
+      token,
+    });
+
+    setTransactions(data.transactions);
+    setCategories(data.categories);
+    setBudgets(data.budgets);
+    setSettings(data.settings);
   };
 
   return (
@@ -209,6 +322,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         categories,
         budgets,
         settings,
+        isLoading,
         login,
         signup,
         logout,

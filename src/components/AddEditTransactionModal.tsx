@@ -37,7 +37,7 @@ export const AddEditTransactionModal = ({ isOpen, onClose, transaction }: AddEdi
     }
   }, [transaction, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!amount || !category || !date || !description) {
@@ -57,31 +57,47 @@ export const AddEditTransactionModal = ({ isOpen, onClose, transaction }: AddEdi
       description,
     };
 
-    if (transaction) {
-      editTransaction(transaction.id, transactionData);
+    try {
+      if (transaction) {
+        await editTransaction(transaction.id, transactionData);
+        toast({
+          title: "Success",
+          description: "Transaction updated successfully",
+        });
+      } else {
+        await addTransaction(transactionData);
+        toast({
+          title: "Success",
+          description: "Transaction added successfully",
+        });
+      }
+
+      onClose();
+    } catch (error) {
       toast({
-        title: "Success",
-        description: "Transaction updated successfully",
-      });
-    } else {
-      addTransaction(transactionData);
-      toast({
-        title: "Success",
-        description: "Transaction added successfully",
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Action failed',
+        variant: "destructive",
       });
     }
-
-    onClose();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (transaction) {
-      deleteTransaction(transaction.id);
-      toast({
-        title: "Deleted",
-        description: "Transaction deleted successfully",
-      });
-      onClose();
+      try {
+        await deleteTransaction(transaction.id);
+        toast({
+          title: "Deleted",
+          description: "Transaction deleted successfully",
+        });
+        onClose();
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : 'Delete failed',
+          variant: "destructive",
+        });
+      }
     }
   };
 

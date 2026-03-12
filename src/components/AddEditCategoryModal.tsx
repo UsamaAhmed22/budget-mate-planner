@@ -36,7 +36,7 @@ export const AddEditCategoryModal = ({ isOpen, onClose, category }: AddEditCateg
     }
   }, [category, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name || !type || !color) {
@@ -54,21 +54,29 @@ export const AddEditCategoryModal = ({ isOpen, onClose, category }: AddEditCateg
       color,
     };
 
-    if (category) {
-      editCategory(category.id, categoryData);
+    try {
+      if (category) {
+        await editCategory(category.id, categoryData);
+        toast({
+          title: "Success",
+          description: "Category updated successfully",
+        });
+      } else {
+        await addCategory(categoryData);
+        toast({
+          title: "Success",
+          description: "Category added successfully",
+        });
+      }
+
+      onClose();
+    } catch (error) {
       toast({
-        title: "Success",
-        description: "Category updated successfully",
-      });
-    } else {
-      addCategory(categoryData);
-      toast({
-        title: "Success",
-        description: "Category added successfully",
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Action failed',
+        variant: "destructive",
       });
     }
-
-    onClose();
   };
 
   return (

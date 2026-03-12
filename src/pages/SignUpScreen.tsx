@@ -16,7 +16,7 @@ const SignUpScreen = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -30,7 +30,7 @@ const SignUpScreen = () => {
       return;
     }
 
-    const success = signup(name, email, password);
+    const success = await signup(name, email, password);
     if (success) {
       toast({
         title: "Account created!",

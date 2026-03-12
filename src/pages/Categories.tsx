@@ -29,13 +29,21 @@ const Categories = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this category?')) {
-      deleteCategory(id);
-      toast({
-        title: "Deleted",
-        description: "Category deleted successfully",
-      });
+      try {
+        await deleteCategory(id);
+        toast({
+          title: "Deleted",
+          description: "Category deleted successfully",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : 'Delete failed',
+          variant: 'destructive',
+        });
+      }
     }
   };
 

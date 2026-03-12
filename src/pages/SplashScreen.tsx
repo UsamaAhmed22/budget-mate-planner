@@ -5,9 +5,13 @@ import { Wallet } from 'lucide-react';
 
 const SplashScreen = () => {
   const navigate = useNavigate();
-  const { currentUser } = useApp();
+  const { currentUser, isLoading } = useApp();
 
   useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
     const timer = setTimeout(() => {
       if (currentUser) {
         navigate('/dashboard');
@@ -17,7 +21,7 @@ const SplashScreen = () => {
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, [currentUser, navigate]);
+  }, [currentUser, isLoading, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-primary">

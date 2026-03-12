@@ -16,8 +16,8 @@ const Dashboard = () => {
   const currentMonth = new Date().toISOString().substring(0, 7);
   
   const monthTransactions = transactions.filter(t => t.date.startsWith(currentMonth));
-  const monthlyIncome = monthTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-  const monthlyExpenses = monthTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+  const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+  const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
   const currentBalance = settings.startingBalance + transactions.reduce((sum, t) => t.type === 'income' ? sum + t.amount : sum - t.amount, 0);
 
   const recentTransactions = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
@@ -58,7 +58,7 @@ const Dashboard = () => {
             <h1 className="text-3xl font-bold text-foreground">
               Hello, {currentUser?.name.split(' ')[0] || 'Guest'} 👋
             </h1>
-            <p className="text-muted-foreground mt-1">Welcome to your financial overview</p>
+            <p className="text-muted-foreground mt-1">Household financial overview</p>
           </div>
           <Button onClick={handleAddNew} size="lg" className="shadow-md">
             <Plus className="w-5 h-5 mr-2" />
@@ -81,15 +81,17 @@ const Dashboard = () => {
             variant="default"
           />
           <SummaryCard
-            title="Monthly Income"
-            value={`${symbol}${monthlyIncome.toFixed(2)}`}
+            title="Total Income"
+            value={`${symbol}${totalIncome.toFixed(2)}`}
             icon={TrendingUp}
+            trend={`${transactions.filter(t => t.type === 'income').length} income transactions`}
             variant="income"
           />
           <SummaryCard
-            title="Monthly Expenses"
-            value={`${symbol}${monthlyExpenses.toFixed(2)}`}
+            title="Total Expenses"
+            value={`${symbol}${totalExpenses.toFixed(2)}`}
             icon={TrendingDown}
+            trend={`${transactions.filter(t => t.type === 'expense').length} expense transactions`}
             variant="expense"
           />
         </div>
