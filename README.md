@@ -78,29 +78,12 @@ In `server/.env`:
 - `JWT_SECRET="replace_with_a_long_random_secret"`
 - `PORT=4000`
 - `FRONTEND_URL="http://localhost:5173"`
+- `FRONTEND_URLS="https://your-frontend-domain.com,https://your-other-domain.com"` (optional)
+- `ALLOW_VERCEL_ORIGIN="true"` (optional for `*.vercel.app` preview domains)
 
 ## Deployment guide
 
 You can deploy frontend and backend separately.
-
-### Frontend deployment (GitHub Pages + GitHub Actions)
-
-1. Keep backend deployed separately (Render/Railway/Fly/VM).
-2. In GitHub repo, add a repository variable:
-	- `VITE_API_URL=https://your-backend-domain/api`
-3. Push to `main`.
-4. In GitHub repo settings:
-	- Go to `Settings -> Pages`
-	- Set source to `GitHub Actions`
-5. The workflow at `.github/workflows/deploy-pages.yml` will:
-	- Install dependencies
-	- Build frontend with `VITE_BASE_PATH=/<repo-name>/`
-	- Upload `dist/` and deploy to GitHub Pages
-
-Notes:
-
-- GitHub Pages is static hosting only. It cannot host the Express API server.
-- SPA routing is supported by publishing `dist/404.html` as a fallback.
 
 ### Backend deployment (Render/Railway/Fly/VM)
 
@@ -120,6 +103,18 @@ Notes:
 	- `npm run build`
 4. Publish directory:
 	- `dist`
+
+### Vercel Login/Signup fix checklist
+
+If login/signup works locally but fails on Vercel, verify all of these:
+
+1. Frontend env on Vercel is set:
+	- `VITE_API_URL=https://your-backend-domain/api`
+2. Backend is deployed separately (Vercel static frontend alone is not enough).
+3. Backend CORS allows your frontend domain:
+	- Set `FRONTEND_URL=https://your-vercel-domain.vercel.app`
+	- Optionally set `ALLOW_VERCEL_ORIGIN=true` for preview URLs.
+4. After env updates, redeploy frontend and restart backend service.
 
 ## API overview
 

@@ -41,7 +41,7 @@ const App = () => (
       <AppProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter basename={import.meta.env.BASE_URL}>
+        <BrowserRouter>
           <Routes>
             <Route path="/" element={<SplashScreen />} />
             <Route path="/login" element={<LoginScreen />} />

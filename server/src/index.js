@@ -11,13 +11,31 @@ const prisma = new PrismaClient();
 const sseClients = new Set();
 const PORT = Number(process.env.PORT || 4000);
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const FRONTEND_URLS = (process.env.FRONTEND_URLS || "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
 const ALLOWED_ORIGINS = [
   FRONTEND_URL,
+  ...FRONTEND_URLS,
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "http://localhost:8081",
   "http://127.0.0.1:8081"
 ];
+const ALLOW_VERCEL_ORIGIN = process.env.ALLOW_VERCEL_ORIGIN === "true";
+
+const isAllowedOrigin = (origin) => {
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    return true;
+  }
+
+  if (ALLOW_VERCEL_ORIGIN && /\.vercel\.app$/i.test(origin.replace(/^https?:\/\//i, ""))) {
+    return true;
+  }
+
+  return false;
+};
 
 const DEFAULT_CATEGORIES = [
   { name: "Salary", type: "income", color: "#10b981" },
@@ -40,7 +58,7 @@ const DEFAULT_SETTINGS = {
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      if (!origin || isAllowedOrigin(origin)) {
         callback(null, true);
         return;
       }
