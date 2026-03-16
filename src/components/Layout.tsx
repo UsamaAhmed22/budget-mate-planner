@@ -8,7 +8,7 @@ interface LayoutProps {
 }
 
 const Layout = ({ children }: LayoutProps) => {
-  const { currentUser } = useApp();
+  const { currentUser, isRealtimeConnected } = useApp();
   const location = useLocation();
 
   const navItems = [
@@ -49,6 +49,10 @@ const Layout = ({ children }: LayoutProps) => {
         <div className="p-6">
           <h1 className="text-2xl font-bold text-foreground">BudgetMate</h1>
           <p className="text-sm text-muted-foreground mt-1">Personal Finance</p>
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-secondary/60 px-3 py-1 text-xs">
+            <span className={`h-2 w-2 rounded-full ${isRealtimeConnected ? 'bg-success' : 'bg-destructive'}`} />
+            <span className="text-foreground">{isRealtimeConnected ? 'Live synced' : 'Sync offline'}</span>
+          </div>
         </div>
         <nav className="flex-1 px-3 space-y-1">
           {navItems.map((item) => {
@@ -73,7 +77,15 @@ const Layout = ({ children }: LayoutProps) => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 pb-20 md:pb-0">{children}</main>
+      <main className="flex-1 pb-20 md:pb-0">
+        <div className="md:hidden px-4 pt-3">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-secondary/60 px-3 py-1 text-xs">
+            <span className={`h-2 w-2 rounded-full ${isRealtimeConnected ? 'bg-success' : 'bg-destructive'}`} />
+            <span className="text-foreground">{isRealtimeConnected ? 'Live synced' : 'Sync offline'}</span>
+          </div>
+        </div>
+        {children}
+      </main>
     </div>
   );
 };

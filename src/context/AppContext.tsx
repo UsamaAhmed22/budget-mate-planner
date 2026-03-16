@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { apiRequest } from '@/lib/api';
+import { API_BASE_URL, apiRequest } from '@/lib/api';
 
 export interface User {
   id: number;
@@ -46,6 +46,7 @@ interface AppContextType {
   budgets: Budget[];
   settings: Settings;
   isLoading: boolean;
+  isRealtimeConnected: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -92,6 +93,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [budgets, setBudgets] = useState<Budget[]>(initialBudgets);
   const [settings, setSettings] = useState<Settings>(initialSettings);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
 
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('bm_token'));
 
@@ -159,6 +161,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     void init();
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) {
+      setIsRealtimeConnected(false);
+      return;
+    }
+
+    const eventsUrl = `${API_BASE_URL}/events?token=${encodeURIComponent(token)}`;
+    const eventSource = new EventSource(eventsUrl);
+
+    const onConnected = () => setIsRealtimeConnected(true);
+    const onError = () => setIsRealtimeConnected(false);
+
+    const refreshData = () => {
+      setIsRealtimeConnected(true);
+      void loadBootstrap(token).catch(() => {
+        // Ignore transient realtime sync errors.
+      });
+    };
+
+    eventSource.addEventListener('connected', onConnected);
+    eventSource.addEventListener('error', onError as EventListener);
+    eventSource.addEventListener('refresh', refreshData);
+
+    return () => {
+      setIsRealtimeConnected(false);
+      eventSource.removeEventListener('connected', onConnected);
+      eventSource.removeEventListener('error', onError as EventListener);
+      eventSource.removeEventListener('refresh', refreshData);
+      eventSource.close();
+    };
   }, [token]);
 
   // Apply theme on mount and when settings change
@@ -323,6 +357,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         budgets,
         settings,
         isLoading,
+        isRealtimeConnected,
         login,
         signup,
         logout,

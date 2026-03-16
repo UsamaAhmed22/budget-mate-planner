@@ -8,6 +8,7 @@ import { authMiddleware } from "./middleware/auth.js";
 
 const app = express();
 const prisma = new PrismaClient();
+const sseClients = new Set();
 const PORT = Number(process.env.PORT || 4000);
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 const ALLOWED_ORIGINS = [
@@ -61,6 +62,19 @@ const signToken = (user) =>
   jwt.sign({ id: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET, {
     expiresIn: "7d"
   });
+
+const verifyToken = (token) => jwt.verify(token, process.env.JWT_SECRET);
+
+const broadcastRefresh = () => {
+  const data = `event: refresh\ndata: ${JSON.stringify({ at: Date.now() })}\n\n`;
+  for (const client of sseClients) {
+    try {
+      client.write(data);
+    } catch {
+      sseClients.delete(client);
+    }
+  }
+};
 
 const formatDate = (date) => new Date(date).toISOString().slice(0, 10);
 
@@ -147,6 +161,39 @@ const getBootstrapData = async () => {
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
+});
+
+app.get("/api/events", async (req, res) => {
+  const token = String(req.query.token || "");
+  if (!token) {
+    return res.status(401).json({ message: "Missing token" });
+  }
+
+  let payload;
+  try {
+    payload = verifyToken(token);
+  } catch {
+    return res.status(401).json({ message: "Invalid token" });
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: payload.id } });
+  if (!user) {
+    return res.status(401).json({ message: "Invalid token" });
+  }
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  if (typeof res.flushHeaders === "function") {
+    res.flushHeaders();
+  }
+
+  res.write(`event: connected\ndata: ${JSON.stringify({ ok: true })}\n\n`);
+  sseClients.add(res);
+
+  req.on("close", () => {
+    sseClients.delete(res);
+  });
 });
 
 app.post("/api/auth/signup", async (req, res) => {
@@ -242,6 +289,8 @@ app.post("/api/transactions", authMiddleware, async (req, res) => {
       }
     });
 
+    broadcastRefresh();
+
     return res.status(201).json({
       id: transaction.id,
       amount: transaction.amount,
@@ -277,6 +326,8 @@ app.put("/api/transactions/:id", authMiddleware, async (req, res) => {
       }
     });
 
+    broadcastRefresh();
+
     return res.json({
       id: updated.id,
       amount: updated.amount,
@@ -301,6 +352,7 @@ app.delete("/api/transactions/:id", authMiddleware, async (req, res) => {
     }
 
     await prisma.transaction.delete({ where: { id } });
+    broadcastRefresh();
     return res.status(204).send();
   } catch (error) {
     console.error(error);
@@ -324,6 +376,8 @@ app.post("/api/budgets", authMiddleware, async (req, res) => {
         month
       }
     });
+
+    broadcastRefresh();
 
     return res.status(201).json({
       id: budget.id,
@@ -364,6 +418,8 @@ app.post("/api/categories", authMiddleware, async (req, res) => {
       }
     });
 
+    broadcastRefresh();
+
     return res.status(201).json({
       id: category.id,
       name: category.name,
@@ -399,6 +455,8 @@ app.put("/api/categories/:id", authMiddleware, async (req, res) => {
       }
     });
 
+    broadcastRefresh();
+
     return res.json({
       id: updated.id,
       name: updated.name,
@@ -425,6 +483,7 @@ app.delete("/api/categories/:id", authMiddleware, async (req, res) => {
     }
 
     await prisma.category.delete({ where: { id } });
+    broadcastRefresh();
     return res.status(204).send();
   } catch (error) {
     console.error(error);
@@ -455,6 +514,8 @@ app.patch("/api/settings", authMiddleware, async (req, res) => {
         ...(startingBalance !== undefined ? { startingBalance: Number(startingBalance) } : {})
       }
     });
+
+    broadcastRefresh();
 
     return res.json({
       currency: updated.currency,
@@ -498,6 +559,7 @@ app.post("/api/reset", authMiddleware, async (req, res) => {
     });
 
     const data = await getBootstrapData();
+    broadcastRefresh();
     return res.json(data);
   } catch (error) {
     console.error(error);
