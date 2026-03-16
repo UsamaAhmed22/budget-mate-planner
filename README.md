@@ -83,6 +83,25 @@ In `server/.env`:
 
 You can deploy frontend and backend separately.
 
+### Frontend deployment (GitHub Pages + GitHub Actions)
+
+1. Keep backend deployed separately (Render/Railway/Fly/VM).
+2. In GitHub repo, add a repository variable:
+	- `VITE_API_URL=https://your-backend-domain/api`
+3. Push to `main`.
+4. In GitHub repo settings:
+	- Go to `Settings -> Pages`
+	- Set source to `GitHub Actions`
+5. The workflow at `.github/workflows/deploy-pages.yml` will:
+	- Install dependencies
+	- Build frontend with `VITE_BASE_PATH=/<repo-name>/`
+	- Upload `dist/` and deploy to GitHub Pages
+
+Notes:
+
+- GitHub Pages is static hosting only. It cannot host the Express API server.
+- SPA routing is supported by publishing `dist/404.html` as a fallback.
+
 ### Backend deployment (Render/Railway/Fly/VM)
 
 1. Deploy `server/` as a Node service.
