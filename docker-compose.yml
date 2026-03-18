@@ -1,0 +1,40 @@
+services:
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: budgetmate-backend
+    environment:
+      DATABASE_URL: file:/app/data/dev.db
+      JWT_SECRET: ${JWT_SECRET:-replace_with_a_long_random_secret}
+      PORT: 4000
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+      FRONTEND_URLS: ${FRONTEND_URLS:-}
+      ALLOW_VERCEL_ORIGIN: ${ALLOW_VERCEL_ORIGIN:-false}
+    volumes:
+      - budgetmate_data:/app/data
+    ports:
+      - "4000:4000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+    container_name: budgetmate-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+volumes:
+  budgetmate_data:

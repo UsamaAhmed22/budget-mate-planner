@@ -85,6 +85,86 @@ In `server/.env`:
 
 You can deploy frontend and backend separately.
 
+## Docker Compose deployment (free on your own VPS)
+
+This project can run as full stack using Docker Compose:
+
+- `frontend` container: Nginx serving built React app
+- `backend` container: Node + Express + Prisma
+- `budgetmate_data` volume: persistent SQLite database file
+
+### 1) Prerequisites
+
+- Docker installed
+- Docker Compose plugin installed (`docker compose` command)
+
+### 2) Configure compose environment
+
+Create compose env file from example:
+
+```bash
+cp .env.compose.example .env
+```
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.compose.example .env
+```
+
+Update `.env` values:
+
+- `JWT_SECRET` (required, strong random string)
+- `FRONTEND_URL` (default `http://localhost:8080`)
+- `FRONTEND_URLS` (optional comma-separated extra domains)
+
+### 3) Build and run
+
+```bash
+docker compose up -d --build
+```
+
+### 4) Verify services
+
+- Frontend: `http://localhost:8080`
+- Backend health: `http://localhost:4000/api/health` (inside compose network; API also available via frontend domain on `/api`)
+
+Health check through frontend routing:
+
+```bash
+curl http://localhost:8080/api/health
+```
+
+### 5) Stop services
+
+```bash
+docker compose down
+```
+
+Keep database data (recommended):
+
+```bash
+docker compose down
+```
+
+Remove database volume too (this deletes all app data):
+
+```bash
+docker compose down -v
+```
+
+### 6) Update after code changes
+
+```bash
+docker compose up -d --build
+```
+
+### Notes
+
+- Frontend is built with `VITE_API_URL=/api` in compose, so browser uses same-origin API calls.
+- Backend runs `prisma migrate deploy` on container startup.
+- SQLite file is stored in Docker volume `budgetmate_data` for persistence.
+
 ### Backend deployment (Render/Railway/Fly/VM)
 
 1. Deploy `server/` as a Node service.
