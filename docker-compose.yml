@@ -8,7 +8,7 @@ services:
       DATABASE_URL: file:/app/data/dev.db
       JWT_SECRET: ${JWT_SECRET:-replace_with_a_long_random_secret}
       PORT: 4000
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       FRONTEND_URLS: ${FRONTEND_URLS:-}
       ALLOW_VERCEL_ORIGIN: ${ALLOW_VERCEL_ORIGIN:-false}
     volumes:
@@ -34,7 +34,7 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "8080:80"
+      - "3000:80"
     restart: unless-stopped
 
 volumes:
