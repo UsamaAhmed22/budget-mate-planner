@@ -4,6 +4,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
     container_name: budgetmate-backend
+    network_mode: host
     environment:
       DATABASE_URL: file:/app/data/dev.db
       JWT_SECRET: ${JWT_SECRET:-replace_with_a_long_random_secret}
@@ -13,8 +14,6 @@ services:
       ALLOW_VERCEL_ORIGIN: ${ALLOW_VERCEL_ORIGIN:-false}
     volumes:
       - budgetmate_data:/app/data
-    ports:
-      - "4000:4000"
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
       interval: 15s
@@ -30,11 +29,7 @@ services:
       args:
         VITE_API_URL: /api
     container_name: budgetmate-frontend
-    depends_on:
-      backend:
-        condition: service_healthy
-    ports:
-      - "3000:80"
+    network_mode: host
     restart: unless-stopped
 
 volumes:
