@@ -2,7 +2,8 @@ FROM oven/bun:1 AS build
 WORKDIR /app
 
 COPY package.json bun.lockb ./
-RUN bun install --frozen-lockfile
+
+RUN bun install --no-frozen-lockfile --ignore-scripts
 
 COPY . .
 ARG VITE_API_URL=/api
