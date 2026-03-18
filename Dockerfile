@@ -1,11 +1,13 @@
-FROM node:20.19.0-alpine AS build
+FROM oven/bun:1 AS build
 WORKDIR /app
-COPY package*.json ./
-RUN npm install
+
+COPY package.json bun.lockb ./
+RUN bun install --frozen-lockfile
+
 COPY . .
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=${VITE_API_URL}
-RUN npm run build
+RUN bun run build
 
 FROM nginx:1.27-alpine AS runtime
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf
